@@ -1,6 +1,6 @@
 # Wallet backend
 
-This repository contains backend components of the German National Wallet: 
+This repository contains backend components of the German National Wallet: e
 * **WPB** (Wallet Provider Backend, Wallet Instance Attestations),
 * **RWSCA** (Remote Wallet Secure Cryptographic Application, PIN sessions / remote signing / Wallet Trust Evidence),
 * **MDVM** (mobile device verification, platform-integrity checks and MDVM tokens),
