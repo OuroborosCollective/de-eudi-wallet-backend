@@ -1,0 +1,3 @@
+# Integration Memory
+
+- 2026-09-10 — Änderung: Bouncy-Castle-Provider-Initialisierung von impliziter JVM-Globalmutation auf verifizierte Bootstrap-Registrierung umgestellt und revisionsgebundene Source-Invarianten vorbereitet. Erkenntnis: `runWalletService` schützt inzwischen alle fünf Entrypoints zentral, aber `BouncyCastle.kt` konnte beim bloßen Laden einen gleichnamigen Provider ungeprüft entfernen; der öffentliche Mirror enthält keine Build-/Test-/Dockerflächen für einen vollständigen Runtimebeweis. Evidence: ZIP-Audit 127 Dateien/123 Kotlin-Dateien, kein `src/test`, kein Wrapper/Buildfile/Workflow; lokaler Security-Invariant-Check PASS; GitHub-Ausgangsrevision `07a7eb6138efce567e4270cc84c28c40e0f14307`.
