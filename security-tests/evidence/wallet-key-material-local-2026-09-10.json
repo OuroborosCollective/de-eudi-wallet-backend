@@ -1,0 +1,38 @@
+{
+  "scope": "Selected production key-material input boundary, not the whole backend",
+  "base_revision": "da7871c92da13e4f06432b8e8281f75446a8b117",
+  "original_key_blob": "8b4fea7ed734c3e6f7547bb2116c55ca8840b580",
+  "local_environment": {
+    "kotlin": "1.9.0",
+    "java": "21.0.11",
+    "bouncy_castle_distribution": "1.80",
+    "jvm_target": "17",
+    "docker_executed": false
+  },
+  "runtime_result": "PASS",
+  "test_groups": 25,
+  "valid_key_roundtrips": 64,
+  "malformed_der_inputs": 1000,
+  "parallel_operations": 256,
+  "compiled_mutations_rejected": [
+    "incomplete_domain_parameters",
+    "unclosed_input_streams"
+  ],
+  "facade_compile": "NOT_RUN; six exact source-wiring assertions only",
+  "whole_backend_compile": "NOT_RUN",
+  "production_runtime": "NOT_RUN",
+  "complete_clean_architecture_rounds": 0,
+  "wolfram": "EXTERNAL_ERROR; no proof returned",
+  "sonarqube": "NOT_RUN; exact plugin search returned no match",
+  "log_sha256": "685350b1a7d3751cb976834f06fcd995690a84319e3f89287451092e98e7881f",
+  "files_sha256": {
+    "src/main/kotlin/de/eudiwallet/backend/shared/crypto/Key.kt": "23d1b1cf64d44c8cc1fa97e4a1316a3cc708f3cbefcab479005af99c8b56bba2",
+    "src/main/kotlin/de/eudiwallet/backend/shared/crypto/WalletKeyMaterial.kt": "e9394f0b9456874d62fde000992898204cfd727e15b2d1e5a19d4a93efe7f17c",
+    "src/main/kotlin/de/eudiwallet/backend/shared/crypto/BouncyCastle.kt": "e00533d4c02ffc7ee74bce3a7de3240b61635ee45cebc33bd23a704e5784599b",
+    "security-tests/WalletKeyMaterialRegression.kt": "69d1f714cfe6c481bb5bce6b45e9b3db1a8c37f178e5e412dc1cd90f57fb8d08",
+    "security-tests/run_wallet_key_regressions.sh": "1b24052593b97bd9295b51a50d2b01d0634941afb1d6ff493e2b514cd606960a",
+    ".github/workflows/wallet-key-material-regression.yml": "2d57322d0190d4843621b36ee2f8865b05a02d03f702ac5a7efc59cca93562b7"
+  },
+  "ci_result": "Not recorded in this local receipt; inspect actual workflow run bound to commit",
+  "corrections": "SEC1 positive fixture uses a real BC-parsed EC private key so its PEM carries domain parameters. No verification was mocked."
+}

@@ -3,12 +3,7 @@ package de.eudiwallet.backend.shared.crypto
 import com.nimbusds.jose.jwk.Curve
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.util.Base64URL
-import org.bouncycastle.openssl.PEMKeyPair
-import org.bouncycastle.openssl.PEMParser
 import org.springframework.core.io.Resource
-import java.io.InputStreamReader
-import java.security.AlgorithmParameters
-import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.cert.CertificateFactory
@@ -16,11 +11,6 @@ import java.security.cert.X509Certificate
 import java.security.interfaces.ECPrivateKey
 import java.security.interfaces.ECPublicKey
 import java.security.spec.ECGenParameterSpec
-import java.security.spec.ECParameterSpec
-import java.security.spec.ECPublicKeySpec
-import java.security.spec.InvalidKeySpecException
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.X509EncodedKeySpec
 import javax.crypto.KeyGenerator
 
 val RECOMMENDED_EC_CURVE: Curve = Curve.P_256
@@ -32,38 +22,13 @@ private const val RECOMMENDED_AES_KEYSIZE = 256
 private const val CERTIFICATE_FACTORY_X509 = "X.509"
 private const val PEM_CHUNK_SIZE = 64
 
-@Suppress("TooGenericExceptionCaught")
-fun ByteArray.ecPublicKeyFromX509(): ECPublicKey =
-    try {
-        val x509EncodedKeySpec = X509EncodedKeySpec(this)
-        val keyFactory = KeyFactory.getInstance(ALGORITHM_EC, BOUNCY_CASTLE_PROVIDER)
-        keyFactory.generatePublic(x509EncodedKeySpec) as ECPublicKey
-    } catch (ex: InvalidKeySpecException) {
-        throw ex
-    } catch (ex: Exception) {
-        throw InvalidKeySpecException(ex)
-    }
+fun ByteArray.ecPublicKeyFromX509(): ECPublicKey = WalletKeyMaterial.decodePublicKey(this)
 
-fun ByteArray.ecPrivateKeyFromPkcs8(): ECPrivateKey {
-    val pkcs8EncodedKeySpec = PKCS8EncodedKeySpec(this)
-    val keyFactory = KeyFactory.getInstance(ALGORITHM_EC, BOUNCY_CASTLE_PROVIDER)
-    return keyFactory.generatePrivate(pkcs8EncodedKeySpec) as ECPrivateKey
-}
+fun ByteArray.ecPrivateKeyFromPkcs8(): ECPrivateKey = WalletKeyMaterial.decodePrivateKey(this)
 
-fun ECPublicKey.toECJWK(): ECKey = ECKey.Builder(RECOMMENDED_EC_CURVE, this).build()
+fun ECPublicKey.toECJWK(): ECKey = ECKey.Builder(RECOMMENDED_EC_CURVE, toCanonicalP256()).build()
 
-private val P256_PARAMS: ECParameterSpec =
-    AlgorithmParameters.getInstance(ALGORITHM_EC, BOUNCY_CASTLE_PROVIDER).run {
-        init(ECGenParameterSpec(RECOMMENDED_EC_CURVE.stdName))
-        getParameterSpec(ECParameterSpec::class.java)
-    }
-
-fun ECPublicKey.toCanonicalP256(): ECPublicKey {
-    require(this.params.curve == P256_PARAMS.curve) { "auth key is not P-256" }
-    val spec = ECPublicKeySpec(this.w, P256_PARAMS)
-    return KeyFactory.getInstance(ALGORITHM_EC, BOUNCY_CASTLE_PROVIDER)
-        .generatePublic(spec) as ECPublicKey
-}
+fun ECPublicKey.toCanonicalP256(): ECPublicKey = WalletKeyMaterial.canonicalP256(this)
 
 fun ECPublicKey.jwkThumbprint(): Base64URL = toECJWK().computeThumbprint()
 
@@ -95,14 +60,10 @@ val softwareAesKeyGenerator: KeyGenerator =
         init(RECOMMENDED_AES_KEYSIZE)
     }
 
-fun readPKCS8ECPrivateKey(pemPath: Resource): ECPrivateKey =
-    PEMParser(InputStreamReader(pemPath.inputStream)).use {
-        val pemObject = it.readObject() as PEMKeyPair
-        pemObject.privateKeyInfo.encoded.ecPrivateKeyFromPkcs8()
-    }
+fun readPKCS8ECPrivateKey(pemPath: Resource): ECPrivateKey = WalletKeyMaterial.readPrivateKey(pemPath.inputStream)
 
-fun readX509Cert(certificateResource: Resource) =
-    x509CertificateFactory.generateCertificate(certificateResource.inputStream) as X509Certificate
+fun readX509Cert(certificateResource: Resource): X509Certificate =
+    WalletKeyMaterial.readCertificate(certificateResource.inputStream)
 
 fun List<String>.toPemChain(): String =
     joinToString(separator = "\n") { base64Der ->
