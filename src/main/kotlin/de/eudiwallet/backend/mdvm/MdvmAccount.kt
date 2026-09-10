@@ -31,13 +31,11 @@ private const val MAX_ANDROID_SIGNATURE_DIGESTS = 64
 private const val IOS_ASSERTION_COUNTER_MAX = 0xffff_ffffL
 
 /*
- * Deliberately allow-listed instead of accepting arbitrary explicit EC parameters.
- *
- * P-256 is the normal mobile-attestation/authentication choice, while P-384/P-521
- * remain accepted for compatibility with stronger NIST EC profiles. If this
- * service contract requires ES256 only, narrow this list to "secp256r1".
+ * MDVM authentication identity is deliberately restricted to the repository's
+ * canonical P-256 domain. Accepting additional curves here would diverge from
+ * shared.crypto.toECJWK(), which encodes wallet EC identities as P-256.
  */
-private val ALLOWED_EC_CURVES = listOf("secp256r1", "secp384r1", "secp521r1")
+private val ALLOWED_EC_CURVES = listOf("secp256r1")
 
 data class MdvmAccount(
     val mdvmAccountId: MdvmAccountId,
@@ -57,11 +55,6 @@ data class MdvmAccount(
 
         authPublicKey.requireHardenedEcPublicKey()
 
-        /*
-         * A persisted account must not mix Android and iOS attestation families.
-         * An iOS assertion without the corresponding attestation is also rejected:
-         * the counter alone is not proof of an App Attest trust chain.
-         */
         securityRequire(
             androidDeviceAttestation == null ||
                 (iosDeviceAttestation == null && iosDeviceAssertion == null),
@@ -73,12 +66,6 @@ data class MdvmAccount(
             "iOS assertion state requires a canonical iOS attestation"
         }
 
-        /*
-         * updatedAt is the version timestamp of the persisted security state.
-         * A revocation occurring after updatedAt would make the row internally
-         * contradictory and can otherwise lead to accidental resurrection during
-         * later mappings.
-         */
         securityRequire(revokedAt == null || !revokedAt.isAfter(updatedAt)) {
             "revokedAt must not be later than updatedAt"
         }
@@ -94,13 +81,6 @@ data class MdvmAccount(
         }
     }
 
-    /**
-     * Verify an already cryptographically validated App Attest assertion counter
-     * against the counter persisted for this account.
-     *
-     * This does NOT validate the App Attest signature/challenge/RP ID itself.
-     * Those checks must have succeeded before this method is called.
-     */
     fun requireValidNextIosAssertionCounter(nextCounter: Long) {
         requireNotRevoked()
 
@@ -117,10 +97,6 @@ data class MdvmAccount(
         }
     }
 
-    /**
-     * Atomically constructs the next domain state after the assertion itself has
-     * already been cryptographically verified by the App Attest verifier.
-     */
     fun withVerifiedIosAssertionCounter(
         nextCounter: Long,
         at: Instant = Instant.now(),
@@ -137,17 +113,8 @@ data class MdvmAccount(
         )
     }
 
-    /**
-     * Preserves the original no-argument API. This is appropriate for INSERT.
-     *
-     * For an UPDATE, prefer toEntity(existingEntityId) so the database identity
-     * cannot accidentally rotate while the MDVM account identity stays the same.
-     */
     fun toEntity(): MdvmAccountEntity = toEntity(UUID.randomUUID())
 
-    /**
-     * Hardened update-capable mapper with explicit persistence identity.
-     */
     fun toEntity(entityId: UUID): MdvmAccountEntity {
         requireNotRevokedOrPersistable()
         authPublicKey.requireHardenedEcPublicKey()
@@ -180,10 +147,6 @@ data class MdvmAccount(
         )
     }
 
-    /*
-     * Revoked accounts must remain serializable so the revocation can actually be
-     * persisted. This guard therefore checks consistency, not "not revoked".
-     */
     private fun requireNotRevokedOrPersistable() {
         securityRequire(revokedAt == null || !revokedAt.isAfter(updatedAt)) {
             "Cannot persist contradictory revocation timestamps"
@@ -209,10 +172,6 @@ data class MdvmAccount(
 
             publicKey.requireHardenedEcPublicKey()
 
-            /*
-             * wiHandle is derived security data. Never trust the stored copy if it
-             * no longer matches the stored public key.
-             */
             val expectedWiHandle = publicKey.jwkThumbprint().toString()
             securityRequire(entity.wiHandle == expectedWiHandle) {
                 "Persisted MDVM wiHandle does not match the authentication public key"
@@ -385,13 +344,6 @@ data class AndroidAttestationDetails(
         fun AttestationKeyDescription.toAndroidAttestationDetails(
             allowSoftwareAttestation: Boolean,
         ): AndroidAttestationDetails {
-            /*
-             * AttestationApplicationId is defined by Android in softwareEnforced.
-             * It is intentionally extracted independently from the optional
-             * software-fallback policy below because it carries app identity
-             * (package/version/signing-certificate digests), not a replacement
-             * for hardware RootOfTrust.
-             */
             val attestationApplicationId = softwareEnforced.attestationApplicationId?.getOrNull()
 
             val packagePairs =
@@ -416,10 +368,6 @@ data class AndroidAttestationDetails(
                     )
                 }
 
-            /*
-             * Only these descriptive fields may fall back to softwareEnforced.
-             * RootOfTrust and origin remain hardware-enforced only.
-             */
             val softwareFallback = softwareEnforced.takeIf { allowSoftwareAttestation }
             val rootOfTrust = hardwareEnforced.rootOfTrust?.getOrNull()
 
@@ -546,10 +494,6 @@ private fun ECPublicKey.requireHardenedEcPublicKey() {
         "Authentication public key coordinates are outside the EC field"
     }
 
-    /*
-     * Explicit point-on-curve verification. Do not rely solely on provider
-     * construction accepting the point.
-     */
     val left = y.multiply(y).mod(prime)
     val right =
         x.multiply(x)
@@ -570,11 +514,6 @@ private fun ECPublicKey.requireHardenedEcPublicKey() {
         "Authentication public key uses an unsupported EC curve"
     }
 
-    /*
-     * Reparse the exact persisted representation. This catches provider objects
-     * whose in-memory point/parameters look usable while their serialized
-     * SubjectPublicKeyInfo is malformed or changes identity.
-     */
     val reparsed =
         try {
             encoded.ecPublicKeyFromX509()

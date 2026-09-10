@@ -1,0 +1,65 @@
+name: Status-list codec JVM regression
+
+on:
+  push:
+    branches: [main, patch-1, 'security/codec-hardening-*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codec-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-codec:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Bind source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          git diff --exit-code
+          git diff --cached --exit-code
+          printf 'source_revision=%s\n' "$GITHUB_SHA"
+      - name: Obtain checksum-pinned compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          compiler_dir="$RUNNER_TEMP/codec-kotlin"
+          mkdir -p "$compiler_dir"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --connect-timeout 15 --max-time 240 \
+            https://github.com/JetBrains/kotlin/releases/download/v2.4.10/kotlin-compiler-2.4.10.zip \
+            --output "$compiler_dir/compiler.zip"
+          printf '%s  %s\n' \
+            473dd66c7a3ef4b182065b3da670466c1bf2773a9dbb0ed8b33a39fe9d4f876d \
+            "$compiler_dir/compiler.zip" | sha256sum --check --strict
+          unzip -q "$compiler_dir/compiler.zip" -d "$compiler_dir"
+          chmod -R a+rX "$compiler_dir/kotlinc"
+      - name: Compile and exercise real codec in restricted Docker
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Resolve the official JDK image once, report it, then run its immutable ID.
+          # This is test-runtime identity, not a production-image attestation.
+          docker pull eclipse-temurin:25-jdk
+          image_id=$(docker image inspect eclipse-temurin:25-jdk --format '{{.Id}}')
+          docker image inspect eclipse-temurin:25-jdk --format 'test_image_id={{.Id}} repo_digests={{json .RepoDigests}}'
+          docker run --rm --pull=never --network=none --read-only \
+            --user 65534:65534 --cap-drop=ALL --security-opt=no-new-privileges:true \
+            --memory=1g --cpus=2 --pids-limit=128 --ulimit core=0 --ulimit nofile=256:256 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=384m,mode=1777 \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/src,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/codec-kotlin/kotlinc,dst=/compiler,readonly" \
+            --env HOME=/tmp --env KOTLINC=/compiler/bin/kotlinc --env JVM_TARGET=25 \
+            --env JAVA_OPTS='-Xms32m -Xmx384m -XX:MaxMetaspaceSize=256m' \
+            --workdir /src "$image_id" \
+            bash security-tests/run_codec_regressions.sh

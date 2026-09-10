@@ -27,8 +27,10 @@ jobs:
         run: python security-tests/security_invariants.py
       - name: Verify HSM UTC validity oracle
         run: python security-tests/hsm_validity_oracle.py
-      - name: Verify HSM pool and protocol boundary invariants
-        run: python security-tests/hsm_boundary_invariants.py
+      - name: Verify MDVM replay and evidence oracle
+        run: python security-tests/mdvm_replay_oracle.py
+      - name: Verify PNS endpoint and token negative paths
+        run: python security-tests/pns_security_oracle.py
       - name: Emit revision-bound source evidence
         shell: bash
         run: |
@@ -41,6 +43,14 @@ jobs:
             src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmSessionPool.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/SymmetricKeyLineage.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/AsymmetricSigningLineage.kt \
+            src/main/kotlin/de/eudiwallet/backend/mdvm/MdvmAccount.kt \
+            src/main/kotlin/de/eudiwallet/backend/mdvm/MdvmAccountService.kt \
+            src/main/kotlin/de/eudiwallet/backend/mdvm/MdvmAccountRepository.kt \
+            src/main/kotlin/de/eudiwallet/backend/pns/FcmConfiguration.kt \
+            src/main/kotlin/de/eudiwallet/backend/pns/FcmPushClient.kt \
+            src/main/kotlin/de/eudiwallet/backend/pns/PnsApi.kt \
+            src/main/kotlin/de/eudiwallet/backend/pns/PnsService.kt \
             security-tests/security_invariants.py \
             security-tests/hsm_validity_oracle.py \
-            security-tests/hsm_boundary_invariants.py
+            security-tests/mdvm_replay_oracle.py \
+            security-tests/pns_security_oracle.py

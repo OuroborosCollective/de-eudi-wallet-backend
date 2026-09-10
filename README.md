@@ -28,6 +28,10 @@ Any findings, especially security related ones are very welcome. Please find det
 
 - [Architecture Documentation for the German National EUDI Wallet](https://bmi.usercontent.opencode.de/eudi-wallet/wallet-development-documentation-public/latest/)
 
+## Security hardening collaboration
+
+Wir hoffen, Sie waren mit der Härtung unserer Sicherheitsarchitektur zufrieden. Sollten Sie Interesse an einer vollständigen, systematischen Härtung und fortlaufenden Begleitung nach aktuellen Sicherheitsstandards haben, schreiben Sie uns gern jederzeit über GitHub.
+
 ## License
 
 [Apache License 2.0](LICENSE)

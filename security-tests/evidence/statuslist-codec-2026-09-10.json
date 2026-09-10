@@ -1,0 +1,100 @@
+{
+  "schema": "wallet-security-slice-evidence/v1",
+  "date": "2026-09-10",
+  "scope": "StatusListCodec only; not the full wallet backend",
+  "remoteBaseRevision": "9a6d141bba7ccfa2dc2c5d7a93b7143e317d10ca",
+  "originalCodecGitBlob": "5faa2ab9d97a02f140059714ed746795656e3828",
+  "inputArchiveSha256": "6a7dd2bf61b77720ca3aabd8f168dce4faa417be255131c99f5964e371cedfde",
+  "archiveInventory": {
+    "files": 127,
+    "kotlinFiles": 123,
+    "allFilesSemanticallyAudited": false
+  },
+  "localRuntime": {
+    "compiler": "kotlinc-jvm 1.9.0",
+    "jdk": "OpenJDK 21.0.11",
+    "bytecodeTarget": 17,
+    "network": "isolated user/network namespace, no routes",
+    "filesystem": "restricted chroot; toolchain mounts read-only",
+    "noNewPrivileges": true,
+    "capabilityBoundingSet": "empty",
+    "docker": false
+  },
+  "baseline": {
+    "failedRejectionCases": 8,
+    "productionSourceCompiledAndExecuted": true,
+    "remoteExploitabilityProven": false
+  },
+  "patched": {
+    "passedGroups": 27,
+    "bitPackingVectors": 81920,
+    "roundTrips": 5000,
+    "malformedInputProbes": 1000,
+    "mocksOrStubCodec": false
+  },
+  "compatibility": {
+    "existingMethodSignaturesPreserved": true,
+    "validOneTwoFourEightBitEntriesTested": true,
+    "defaultOutputBudgetBytes": 16777216,
+    "defaultInputBudgetBytes": 33554432,
+    "largerLists": "use explicit bounded overloads; deployment sizing still requires review"
+  },
+  "tools": {
+    "wolfram": "context and evaluator returned HTTP 502; no formal PASS",
+    "sonarqube": "connector discovery returned no match; no Sonar scan performed",
+    "agentConsentPatterns": "skill read; scope is this repository integration, no financial actions",
+    "parallelSearch": "Oracle Inflater documentation retrieved",
+    "elevateInvoices": "not invoked; no invoice task"
+  },
+  "verificationBoundaries": {
+    "fullBackendCompile": false,
+    "liveHsm": false,
+    "liveDatabase": false,
+    "productionDeployment": false,
+    "fourFullArchitectureZeroRounds": 0,
+    "zeroVulnerabilitiesClaim": false,
+    "newCiRun": "not yet observed at receipt creation"
+  },
+  "sources": {
+    "inflaterContract": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/zip/Inflater.html",
+    "kotlinCompilerRelease": "https://github.com/JetBrains/kotlin/releases/tag/v2.4.10"
+  },
+  "sha256": {
+    "src/main/kotlin/de/eudiwallet/backend/statuslist/StatusListCodec.kt": "5f152cc9debd9bab9dd0f19d97993e604c74b186f9fea987794c6ca8ce8de263",
+    "security-tests/StatusListCodecRegression.kt": "ffc4d8623bdde2e60d49ce42105afb994e8fd698740273a7486b6eb58f809867",
+    "security-tests/run_codec_regressions.sh": "5e268abceb58b0cc7d460c134ddf91428c1db0dafc8410f79548b16bedb2a45a",
+    ".github/workflows/statuslist-codec-regression.yml": "feaa421638a9d2af001713a8cfd3f9fa93bcf9a1cfe53271c45089898fe2f26f",
+    "security-tests/MdvmSourceIntegrityRegression.kt": "cf420b18fab6f0735fb7e0e3be096d3b7dcb1d823f7389c11a6d94f539c1d5ca"
+  },
+  "nextReview": "Recheck MDVM temporal invariant against current revoke SQL; exercise the independently changed locked counter persistence with the real database.",
+  "priorCandidateCi": {
+    "head": "b57155ec0f44303fec30ce9d492043cf0a481883",
+    "codecRunId": 34426643730,
+    "sourceInvariantRunId": 34426643725,
+    "conclusion": "success",
+    "compiler": "2.4.10",
+    "java": "Temurin 25.0.4+7",
+    "productionCodecSha256": "5f152cc9debd9bab9dd0f19d97993e604c74b186f9fea987794c6ca8ce8de263"
+  },
+  "mdvmSourceIntegrity": {
+    "truncatedCommitObserved": "3cbe72a44f2cbeb75e525a54dfcd47c3e1cc2be4",
+    "parallelRestorationPreserved": "9a6d141bba7ccfa2dc2c5d7a93b7143e317d10ca",
+    "productionFileChangedByThisIncrement": false,
+    "localParser": "Kotlin PSI 1.9.0",
+    "localParserFixture": "Restoration of blob b7106a9a99525d1dde6c55279744d5ecdf5cee4c with P-256-only constant; not the remote restoration bytes",
+    "positiveCases": 1,
+    "negativeCases": 4,
+    "scope": "syntax and declaration integrity, no symbol resolution, no complete compile or MDVM runtime"
+  },
+  "toolchainWarnings": [
+    "Jansi native library loading denied in restricted Docker tmpfs; compiler and tests completed successfully.",
+    "Existing Actions use deprecated Node20 metadata, executed by runner with Node24; setup-python also emitted a punycode deprecation warning."
+  ],
+  "parserToolchainRegression": {
+    "failedRunId": 34427285655,
+    "failedHead": "b4cb608fc88fd0cb66b177788d451f69ffddcb44",
+    "cause": "Kotlin 2.4 compiler PSI harness requires explicit K1Deprecation and CompilerConfiguration.Internals opt-ins",
+    "fix": "Opt-ins scoped only to compiling the isolated parser harness; all assertions remain enabled",
+    "rerun": "not yet observed at receipt creation"
+  }
+}

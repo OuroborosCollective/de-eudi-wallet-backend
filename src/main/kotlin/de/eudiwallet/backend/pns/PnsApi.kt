@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -61,8 +62,10 @@ data class PnsRegisterRequest(
     @SerialName(MPP_REGISTRATION_TOKEN_FIELD)
     @Schema(
         description = "Push-notification token issued to the WI by the Mobile Platform Provider",
+        minLength = 1,
         maxLength = MAX_MPP_REGISTRATION_TOKEN_LENGTH,
     )
+    @field:NotBlank
     @field:Size(max = MAX_MPP_REGISTRATION_TOKEN_LENGTH)
     val mppRegistrationToken: String,
 ) {
