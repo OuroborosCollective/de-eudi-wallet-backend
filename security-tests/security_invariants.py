@@ -20,6 +20,8 @@ hsm_key = (BACKEND / "shared/hsm/HsmKey.kt").read_text(encoding="utf-8")
 hsm_session = (BACKEND / "shared/hsm/HsmSession.kt").read_text(encoding="utf-8")
 symmetric_lineage = (BACKEND / "shared/keyrollover/SymmetricKeyLineage.kt").read_text(encoding="utf-8")
 asymmetric_lineage = (BACKEND / "shared/keyrollover/AsymmetricSigningLineage.kt").read_text(encoding="utf-8")
+mdvm_account_service = (BACKEND / "mdvm/MdvmAccountService.kt").read_text(encoding="utf-8")
+mdvm_account_repository = (BACKEND / "mdvm/MdvmAccountRepository.kt").read_text(encoding="utf-8")
 
 # All product entry points converge on runWalletService; security is enforced there.
 for path in BACKEND.glob("*Application.kt"):
@@ -81,6 +83,36 @@ require("held.compareAndSet(heldKey, null)" in asymmetric_lineage, "expired sign
 require(
     "now signing with an expired key" not in symmetric_lineage + asymmetric_lineage,
     "key lineage still explicitly permits expired cryptographic use",
+)
+
+# MDVM freshness decisions must be repeated against the latest row under lock.
+for invariant in (
+    "findByMdvmWiIdWithLockNoWait",
+    "assertion.counter <= previousCounter",
+    "NonMonotonicIosAssertionCounter(previousCounter, assertion.counter)",
+    "account.requireValidNextIosAssertionCounter(assertion.counter)",
+    "mdvmService.verifyAndroidDeviceProperties(attestation, account.androidDeviceAttestation)",
+    "mdvmService.verifyIosDeviceProperties(deviceClass, account.deviceClass)",
+    "(iosDeviceAssertion ?: account.iosDeviceAssertion).toStorage()",
+    "(androidAttestationDetails ?: account.androidDeviceAttestation).toStorage()",
+    "InternalErrorCode.DCAS_ATTESTATION_COUNTER_INVALID",
+):
+    require(invariant in mdvm_account_service, f"MDVM locked-state invariant missing: {invariant}")
+
+for invariant in (
+    "COALESCE(:$IOS_DEVICECHECK_ASSERTION_PARAM, $IOS_DEVICECHECK_ASSERTION_COLUMN)",
+    "COALESCE(:$ANDROID_ATTESTATION_DETAILS_PARAM, $ANDROID_ATTESTATION_DETAILS_COLUMN)",
+    "AND $REVOKED_AT_COLUMN IS NULL",
+):
+    require(invariant in mdvm_account_repository, f"MDVM persistence invariant missing: {invariant}")
+
+require(
+    "$IOS_DEVICECHECK_ASSERTION_COLUMN = :$IOS_DEVICECHECK_ASSERTION_PARAM" not in mdvm_account_repository,
+    "MDVM repository can erase iOS assertion evidence with null",
+)
+require(
+    "$ANDROID_ATTESTATION_DETAILS_COLUMN = :$ANDROID_ATTESTATION_DETAILS_PARAM" not in mdvm_account_repository,
+    "MDVM repository can erase Android attestation evidence with null",
 )
 
 # Documentation stubs must remain unreachable as runtime profiles.
