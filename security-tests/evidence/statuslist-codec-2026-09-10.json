@@ -1,0 +1,69 @@
+{
+  "schema": "wallet-security-slice-evidence/v1",
+  "date": "2026-09-10",
+  "scope": "StatusListCodec only; not the full wallet backend",
+  "remoteBaseRevision": "f2cf7cf97bada19643df3ce27141c22c4e597d74",
+  "originalCodecGitBlob": "5faa2ab9d97a02f140059714ed746795656e3828",
+  "inputArchiveSha256": "6a7dd2bf61b77720ca3aabd8f168dce4faa417be255131c99f5964e371cedfde",
+  "archiveInventory": {
+    "files": 127,
+    "kotlinFiles": 123,
+    "allFilesSemanticallyAudited": false
+  },
+  "localRuntime": {
+    "compiler": "kotlinc-jvm 1.9.0",
+    "jdk": "OpenJDK 21.0.11",
+    "bytecodeTarget": 17,
+    "network": "isolated user/network namespace, no routes",
+    "filesystem": "restricted chroot; toolchain mounts read-only",
+    "noNewPrivileges": true,
+    "capabilityBoundingSet": "empty",
+    "docker": false
+  },
+  "baseline": {
+    "failedRejectionCases": 8,
+    "productionSourceCompiledAndExecuted": true,
+    "remoteExploitabilityProven": false
+  },
+  "patched": {
+    "passedGroups": 27,
+    "bitPackingVectors": 81920,
+    "roundTrips": 5000,
+    "malformedInputProbes": 1000,
+    "mocksOrStubCodec": false
+  },
+  "compatibility": {
+    "existingMethodSignaturesPreserved": true,
+    "validOneTwoFourEightBitEntriesTested": true,
+    "defaultOutputBudgetBytes": 16777216,
+    "defaultInputBudgetBytes": 33554432,
+    "largerLists": "use explicit bounded overloads; deployment sizing still requires review"
+  },
+  "tools": {
+    "wolfram": "context and evaluator returned HTTP 502; no formal PASS",
+    "sonarqube": "connector discovery returned no match; no Sonar scan performed",
+    "agentConsentPatterns": "skill read; scope is this repository integration, no financial actions",
+    "parallelSearch": "Oracle Inflater documentation retrieved",
+    "elevateInvoices": "not invoked; no invoice task"
+  },
+  "verificationBoundaries": {
+    "fullBackendCompile": false,
+    "liveHsm": false,
+    "liveDatabase": false,
+    "productionDeployment": false,
+    "fourFullArchitectureZeroRounds": 0,
+    "zeroVulnerabilitiesClaim": false,
+    "newCiRun": "not yet observed at receipt creation"
+  },
+  "sources": {
+    "inflaterContract": "https://docs.oracle.com/en/java/javase/25/docs/api/java.base/java/util/zip/Inflater.html",
+    "kotlinCompilerRelease": "https://github.com/JetBrains/kotlin/releases/tag/v2.4.10"
+  },
+  "sha256": {
+    "src/main/kotlin/de/eudiwallet/backend/statuslist/StatusListCodec.kt": "5f152cc9debd9bab9dd0f19d97993e604c74b186f9fea987794c6ca8ce8de263",
+    "security-tests/StatusListCodecRegression.kt": "ffc4d8623bdde2e60d49ce42105afb994e8fd698740273a7486b6eb58f809867",
+    "security-tests/run_codec_regressions.sh": "00fecdbb44ffe965837476ca0b5af08ec325575f48c3a006174f5b1f2fc11a46",
+    ".github/workflows/statuslist-codec-regression.yml": "feaa421638a9d2af001713a8cfd3f9fa93bcf9a1cfe53271c45089898fe2f26f"
+  },
+  "nextReview": "MDVM temporal invariant versus revoke SQL and assertion counter check inside the locked persistence transaction; not changed in this slice"
+}
