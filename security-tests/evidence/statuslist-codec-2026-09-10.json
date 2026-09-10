@@ -62,7 +62,7 @@
   "sha256": {
     "src/main/kotlin/de/eudiwallet/backend/statuslist/StatusListCodec.kt": "5f152cc9debd9bab9dd0f19d97993e604c74b186f9fea987794c6ca8ce8de263",
     "security-tests/StatusListCodecRegression.kt": "ffc4d8623bdde2e60d49ce42105afb994e8fd698740273a7486b6eb58f809867",
-    "security-tests/run_codec_regressions.sh": "e94392b80bbebd94d075a70cb652eba3e0cedb94f436cfff6e99a4c0822d6eba",
+    "security-tests/run_codec_regressions.sh": "5e268abceb58b0cc7d460c134ddf91428c1db0dafc8410f79548b16bedb2a45a",
     ".github/workflows/statuslist-codec-regression.yml": "feaa421638a9d2af001713a8cfd3f9fa93bcf9a1cfe53271c45089898fe2f26f",
     "security-tests/MdvmSourceIntegrityRegression.kt": "cf420b18fab6f0735fb7e0e3be096d3b7dcb1d823f7389c11a6d94f539c1d5ca"
   },
@@ -89,5 +89,12 @@
   "toolchainWarnings": [
     "Jansi native library loading denied in restricted Docker tmpfs; compiler and tests completed successfully.",
     "Existing Actions use deprecated Node20 metadata, executed by runner with Node24; setup-python also emitted a punycode deprecation warning."
-  ]
+  ],
+  "parserToolchainRegression": {
+    "failedRunId": 34427285655,
+    "failedHead": "b4cb608fc88fd0cb66b177788d451f69ffddcb44",
+    "cause": "Kotlin 2.4 compiler PSI harness requires explicit K1Deprecation and CompilerConfiguration.Internals opt-ins",
+    "fix": "Opt-ins scoped only to compiling the isolated parser harness; all assertions remain enabled",
+    "rerun": "not yet observed at receipt creation"
+  }
 }

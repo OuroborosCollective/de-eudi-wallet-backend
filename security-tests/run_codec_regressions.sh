@@ -22,7 +22,10 @@ sha256sum src/main/kotlin/de/eudiwallet/backend/statuslist/StatusListCodec.kt \
   -include-runtime -d "$BUILD_DIR/codec-regressions.jar"
 "$JAVA" -Xmx128m -cp "$BUILD_DIR/codec-regressions.jar" securitytests.StatusListCodecRegression
 # Parse the real MDVM source. This is syntax/declaration integrity, NOT full type checking.
+# Compiler API opt-ins apply ONLY to this isolated parser harness, never to production.
 "$KOTLINC" -jvm-target "$JVM_TARGET" -cp "$KOTLIN_LIB/kotlin-compiler.jar" \
+  -opt-in=org.jetbrains.kotlin.K1Deprecation \
+  -opt-in=org.jetbrains.kotlin.config.CompilerConfiguration.Internals \
   security-tests/MdvmSourceIntegrityRegression.kt -d "$BUILD_DIR/mdvm-source-tests.jar"
 "$JAVA" -Xmx256m -cp "$BUILD_DIR/mdvm-source-tests.jar:$KOTLIN_LIB/*" \
   securitytests.MdvmSourceIntegrityRegression src/main/kotlin/de/eudiwallet/backend/mdvm/MdvmAccount.kt
