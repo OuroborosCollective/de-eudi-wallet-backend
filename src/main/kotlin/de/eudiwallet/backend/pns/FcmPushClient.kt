@@ -68,7 +68,7 @@ class FcmPushClient(
             } catch (ex: CancellationException) {
                 throw ex
             } catch (ex: Exception) {
-                return PushOutcome.Transient("OAuth token refresh failed: ${ex.message}")
+                return PushOutcome.Transient("OAuth token refresh failed: ${ex.javaClass.simpleName}")
             }
         return try {
             webClient
@@ -83,9 +83,9 @@ class FcmPushClient(
         } catch (ex: CancellationException) {
             throw ex
         } catch (ex: WebClientRequestException) {
-            PushOutcome.Transient("could not reach FCM: ${ex.message}")
+            PushOutcome.Transient("could not reach FCM")
         } catch (ex: Exception) {
-            PushOutcome.Transient("could not read the FCM response: ${ex.message}")
+            PushOutcome.Transient("could not read the FCM response")
         }
     }
 
@@ -100,7 +100,7 @@ class FcmPushClient(
         return withTimeoutOrNull(timeout.toMillis().milliseconds) { refresh.await() }
             ?: run {
                 refresh.cancel()
-                throw IOException("timed out after ${timeout.toMillis()} ms")
+                throw IOException("FCM credential refresh timed out")
             }
     }
 
