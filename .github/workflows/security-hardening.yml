@@ -25,3 +25,17 @@ jobs:
           python-version: '3.13'
       - name: Verify fail-closed source invariants
         run: python security-tests/security_invariants.py
+      - name: Verify HSM UTC validity oracle
+        run: python security-tests/hsm_validity_oracle.py
+      - name: Emit revision-bound source evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'revision=%s\n' "$GITHUB_SHA"
+          sha256sum \
+            src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmKey.kt \
+            src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmSession.kt \
+            src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/SymmetricKeyLineage.kt \
+            src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/AsymmetricSigningLineage.kt \
+            security-tests/security_invariants.py \
+            security-tests/hsm_validity_oracle.py
