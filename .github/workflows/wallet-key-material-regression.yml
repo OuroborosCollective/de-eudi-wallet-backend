@@ -1,0 +1,80 @@
+name: Wallet key-material JVM regression
+
+on:
+  push:
+    branches: [main, patch-1, 'security/wallet-key-material-*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wallet-key-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-key-material:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Bind source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_REVISION"
+          git diff --exit-code
+          git diff --cached --exit-code
+          printf 'source_revision=%s\n' "$EXPECTED_REVISION"
+      - name: Obtain checksum-pinned compiler and real project crypto dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/wallet-key-tools"
+          mkdir -p "$tools/deps"
+          fetch() {
+            curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+              --connect-timeout 15 --max-time 240 "$1" --output "$2"
+            printf '%s  %s\n' "$3" "$2" | sha256sum --check --strict
+          }
+          fetch https://github.com/JetBrains/kotlin/releases/download/v2.4.10/kotlin-compiler-2.4.10.zip \
+            "$tools/compiler.zip" 473dd66c7a3ef4b182065b3da670466c1bf2773a9dbb0ed8b33a39fe9d4f876d
+          unzip -q "$tools/compiler.zip" -d "$tools"
+          fetch https://repo.maven.apache.org/maven2/org/bouncycastle/bcprov-jdk18on/1.85/bcprov-jdk18on-1.85.jar \
+            "$tools/deps/bcprov.jar" 20af26bf6060bb8005cc2389916812c1e0e998dc48d2ced7131b89461b54cff7
+          fetch https://repo.maven.apache.org/maven2/org/bouncycastle/bcpkix-jdk18on/1.85/bcpkix-jdk18on-1.85.jar \
+            "$tools/deps/bcpkix.jar" c9f82b2d4e99c4bbdfccf684e52cc06ea06a0b567bfd0d08f9c5a3f417055996
+          fetch https://repo.maven.apache.org/maven2/org/bouncycastle/bcutil-jdk18on/1.85/bcutil-jdk18on-1.85.jar \
+            "$tools/deps/bcutil.jar" 590f55ed5d68529239898a4a5c4f730b6e37f45d1cfa3fbe51f8485abe32c42d
+          chmod -R a+rX "$tools/kotlinc" "$tools/deps"
+      - name: Exercise selected production key boundary in restricted Docker
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker pull eclipse-temurin:25-jdk
+          image_id=$(docker image inspect eclipse-temurin:25-jdk --format '{{.Id}}')
+          docker image inspect eclipse-temurin:25-jdk --format 'test_image_id={{.Id}} repo_digests={{json .RepoDigests}}'
+          docker run --rm --pull=never --network=none --read-only \
+            --user 65534:65534 --cap-drop=ALL --security-opt=no-new-privileges:true \
+            --memory=1g --cpus=2 --pids-limit=128 --ulimit core=0 --ulimit nofile=256:256 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=384m,mode=1777 \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/src,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/wallet-key-tools/kotlinc,dst=/compiler,readonly" \
+            --mount "type=bind,src=$RUNNER_TEMP/wallet-key-tools/deps,dst=/deps,readonly" \
+            --env HOME=/tmp --env KOTLINC=/compiler/bin/kotlinc --env JVM_TARGET=25 \
+            --env BC_CLASSPATH=/deps/bcprov.jar:/deps/bcpkix.jar:/deps/bcutil.jar \
+            --env JAVA_OPTS='-Xms32m -Xmx384m -XX:MaxMetaspaceSize=256m' \
+            --workdir /src "$image_id" bash security-tests/run_wallet_key_regressions.sh
+      - name: Confirm source remained unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_REVISION"
+          git diff --exit-code
+          git diff --cached --exit-code

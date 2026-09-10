@@ -16,16 +16,30 @@ import java.security.SecureRandom
 import java.security.interfaces.ECPublicKey
 import java.time.Instant
 
+private const val MAX_HSM_WRAPPED_PRIVATE_KEY_BYTES = 64 * 1024
+private const val SHA256_DIGEST_BYTES = 32
+private const val P256_RAW_ECDSA_SIGNATURE_BYTES = 64
+
 @JvmInline
 value class HsmWrappedPrvk(
     val bytes: ByteArray,
-)
+) {
+    init {
+        require(bytes.isNotEmpty()) { "Wrapped private key must not be empty" }
+        require(bytes.size <= MAX_HSM_WRAPPED_PRIVATE_KEY_BYTES) {
+            "Wrapped private key exceeds the supported size bound"
+        }
+    }
+}
 
 @JvmInline
 value class EcdsaSignature(
     val bytes: ByteArray,
 ) {
-    fun toDer(): ByteArray = ECDSA.transcodeSignatureToDER(bytes)
+    fun toDer(): ByteArray {
+        HsmOperationChecks.requireP256Signature(bytes)
+        return ECDSA.transcodeSignatureToDER(bytes)
+    }
 }
 
 data class WrappedKeyPair(
@@ -45,6 +59,15 @@ data class EncryptedData(
     val authTag: ByteArray,
     val iv: ByteArray,
 ) {
+    init {
+        require(authTag.size == AES_TAG_BYTES) {
+            "AES-GCM authentication tag must contain exactly $AES_TAG_BYTES bytes"
+        }
+        require(iv.size == IV_BYTES) {
+            "AES-GCM IV must contain exactly $IV_BYTES bytes"
+        }
+    }
+
     companion object {
         fun fromCipherData(
             data: ByteArray,
@@ -118,10 +141,13 @@ class HsmSession internal constructor(
         masterKeyId: HsmKeyId,
         sha256Digest: ByteArray,
     ): EcdsaSignature {
+        // Reject malformed input before key lookup or native unwrap work.
+        HsmOperationChecks.requireSha256Digest(sha256Digest)
+        val digest = sha256Digest.copyOf()
         val masterKey = getKey(masterKeyId, HsmKeyClass.Aes)
         val privateKey = unwrapWithMasterKey(wrappedPrivateKey, masterKey)
         try {
-            return signDigest(privateKey, sha256Digest)
+            return signDigest(privateKey, digest)
         } finally {
             destroyKeysQuietly(privateKey)
         }
@@ -243,12 +269,16 @@ class HsmSession internal constructor(
         digest: ByteArray,
     ): EcdsaSignature =
         try {
+            HsmOperationChecks.requireSha256Digest(digest)
             telemetryService.withSpanSync("session.sign (ECDSA)") {
-                EcdsaSignature(pkcs11.sign(sessionHandle, Mechanism.Ecdsa, key.handle, digest))
+                val signature = pkcs11.sign(sessionHandle, Mechanism.Ecdsa, key.handle, digest)
+                HsmOperationChecks.requireP256Signature(signature)
+                EcdsaSignature(signature)
             }
         } catch (e: Pkcs11Exception) {
             throw HsmException.SigningFailedException(e)
         }
+    }
 
     fun signHMAC(
         key: HsmKeyRef.GenericSecretKeyRef,
@@ -257,6 +287,7 @@ class HsmSession internal constructor(
         try {
             telemetryService.withSpanSync("session.sign (generic secret)") {
                 pkcs11.sign(sessionHandle, Mechanism.Sha256Hmac, key.handle, data)
+                    .also(HsmOperationChecks::requireSha256Mac)
             }
         } catch (e: Pkcs11Exception) {
             throw HsmException.SigningFailedException(e)
@@ -266,8 +297,9 @@ class HsmSession internal constructor(
         key: HsmKeyRef.GenericSecretKeyRef,
         data: ByteArray,
         signature: ByteArray,
-    ): Boolean =
-        try {
+    ): Boolean {
+        if (!HsmOperationChecks.isSha256Mac(signature)) return false
+        return try {
             telemetryService.withSpanSync("session.verify") {
                 pkcs11.verify(sessionHandle, Mechanism.Sha256Hmac, key.handle, data, signature)
             }
@@ -281,6 +313,7 @@ class HsmSession internal constructor(
                 else -> throw HsmException.SignatureVerificationException(e)
             }
         }
+    }
 
     fun encrypt(
         key: HsmKeyRef.AesKeyRef,
@@ -301,6 +334,7 @@ class HsmSession internal constructor(
             if (iv.all { it == 0.toByte() }) {
                 throw HsmException.EncryptionFailedException(IllegalStateException("HSM wrote back an all-zero IV"))
             }
+            HsmOperationChecks.requireGcmEncryptionResult(iv, cipherData.size, data?.size ?: 0)
             EncryptedData.fromCipherData(cipherData, iv)
         } catch (e: Pkcs11Exception) {
             throw HsmException.EncryptionFailedException(e)
@@ -312,6 +346,7 @@ class HsmSession internal constructor(
         additionalData: ByteArray?,
     ): ByteArray =
         try {
+            HsmOperationChecks.requireGcmDecryptionShape(cipherData.iv, cipherData.authTag, cipherData.cipherText.size)
             telemetryService.withSpanSync("session.decrypt") {
                 pkcs11.decrypt(
                     sessionHandle,

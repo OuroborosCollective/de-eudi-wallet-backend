@@ -15,6 +15,7 @@ import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.security.MessageDigest
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -83,7 +84,45 @@ class HsmSessionPool(
 
         private val SHUTDOWN_DRAIN_TIMEOUT = Duration.ofSeconds(10)
 
-        private val pools = ConcurrentHashMap<String, HsmSessionPool>()
+        private data class PoolIdentity(
+            val moduleLibrary: String,
+            val slotLabel: String,
+        )
+
+        private data class PoolConfiguration(
+            val wrappingMechanism: Long,
+            val poolSize: Int,
+            val workerCount: Int,
+            val borrowTimeout: Duration,
+            val pinFingerprint: PinFingerprint,
+        )
+
+        private data class PoolRegistration(
+            val configuration: PoolConfiguration,
+            val pool: HsmSessionPool,
+        )
+
+        private class PinFingerprint private constructor(
+            private val digest: ByteArray,
+        ) {
+            override fun equals(other: Any?): Boolean =
+                other is PinFingerprint && MessageDigest.isEqual(digest, other.digest)
+
+            override fun hashCode(): Int = digest.contentHashCode()
+
+            companion object {
+                fun from(pin: String): PinFingerprint {
+                    val pinBytes = pin.toByteArray(Charsets.UTF_8)
+                    return try {
+                        PinFingerprint(MessageDigest.getInstance("SHA-256").digest(pinBytes))
+                    } finally {
+                        pinBytes.fill(0)
+                    }
+                }
+            }
+        }
+
+        private val pools = ConcurrentHashMap<PoolIdentity, PoolRegistration>()
 
         fun getOrCreate(
             slot: SlotConfig,
@@ -91,10 +130,48 @@ class HsmSessionPool(
             wrappingMechanism: Long,
             borrowTimeout: Duration,
             telemetryService: TelemetryService,
-        ): HsmSessionPool =
-            pools.computeIfAbsent(slot.label) {
-                create(slot, moduleLibrary, wrappingMechanism, borrowTimeout, telemetryService)
-            }
+        ): HsmSessionPool {
+            val identity =
+                PoolIdentity(
+                    moduleLibrary = moduleLibrary.trim(),
+                    slotLabel = slot.label.trim(),
+                )
+            check(identity.moduleLibrary.isNotEmpty()) { "HSM module library must not be blank" }
+            check(identity.slotLabel.isNotEmpty()) { "HSM slot label must not be blank" }
+
+            val requestedConfiguration =
+                PoolConfiguration(
+                    wrappingMechanism = wrappingMechanism,
+                    poolSize = slot.poolSize,
+                    workerCount = slot.workerCount,
+                    borrowTimeout = borrowTimeout,
+                    pinFingerprint = PinFingerprint.from(slot.pin),
+                )
+
+            val registration =
+                pools.compute(identity) { _, existing ->
+                    if (existing != null) {
+                        check(existing.configuration == requestedConfiguration) {
+                            "Conflicting HSM pool configuration for the same module and slot"
+                        }
+                        existing
+                    } else {
+                        PoolRegistration(
+                            configuration = requestedConfiguration,
+                            pool =
+                                create(
+                                    slot = slot.copy(label = identity.slotLabel),
+                                    moduleLibrary = identity.moduleLibrary,
+                                    wrappingMechanism = wrappingMechanism,
+                                    borrowTimeout = borrowTimeout,
+                                    telemetryService = telemetryService,
+                                ),
+                        )
+                    }
+                } ?: error("Failed to register HSM session pool")
+
+            return registration.pool
+        }
 
         private fun create(
             slot: SlotConfig,
@@ -111,9 +188,15 @@ class HsmSessionPool(
                     val primarySession = pkcs11.openSession(slotId)
                     val opened = mutableListOf(primarySession)
                     try {
-                        pkcs11.login(primarySession, slot.pin.toCharArray())
+                        val pin = slot.pin.toCharArray()
+                        try {
+                            pkcs11.login(primarySession, pin)
+                        } finally {
+                            pin.fill('\u0000')
+                        }
                         repeat(slot.poolSize - 1) { opened.add(pkcs11.openSession(slotId)) }
-                    } catch (ex: Pkcs11Exception) {
+                    } catch (ex: Exception) {
+                        // Includes PIN encoding failures before C_Login is called.
                         pkcs11.closeAll(opened)
                         throw ex
                     }

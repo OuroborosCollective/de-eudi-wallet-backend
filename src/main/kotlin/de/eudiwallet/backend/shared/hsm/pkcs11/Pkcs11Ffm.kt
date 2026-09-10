@@ -118,15 +118,18 @@ internal class Pkcs11Ffm private constructor(
     override fun login(
         session: Long,
         pin: CharArray,
-    ) = Arena.ofConfined().use { arena ->
-        val pinBytes = String(pin).toByteArray(Charsets.UTF_8)
-        val pinSegment = arena.allocateFrom(BYTE, *pinBytes)
-        try {
-            val rv = cLogin.invoke(session, Ck.CKU_USER, pinSegment, pinBytes.size.toLong()) as Long
-            if (rv != Ck.CKR_USER_ALREADY_LOGGED_IN) check("C_Login", rv)
-        } finally {
-            pinSegment.fill(0)
-            pinBytes.fill(0)
+    ) = withUtf8Pin(pin) { pinBytes ->
+        Arena.ofConfined().use { arena ->
+            // An empty PIN remains a supported zero-length input. The spare byte
+            // only provides a valid native address; no extra PIN byte is sent.
+            val pinSegment = arena.allocate(maxOf(1L, pinBytes.size.toLong()))
+            try {
+                MemorySegment.copy(pinBytes, 0, pinSegment, BYTE, 0L, pinBytes.size)
+                val rv = cLogin.invoke(session, Ck.CKU_USER, pinSegment, pinBytes.size.toLong()) as Long
+                if (rv != Ck.CKR_USER_ALREADY_LOGGED_IN) check("C_Login", rv)
+            } finally {
+                pinSegment.fill(0)
+            }
         }
     }
 
