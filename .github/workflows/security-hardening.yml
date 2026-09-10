@@ -37,10 +37,8 @@ jobs:
           set -euo pipefail
           printf 'revision=%s\n' "$GITHUB_SHA"
           sha256sum \
-            src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmConfiguration.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmKey.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmSession.kt \
-            src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmSessionPool.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/SymmetricKeyLineage.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/AsymmetricSigningLineage.kt \
             src/main/kotlin/de/eudiwallet/backend/mdvm/MdvmAccount.kt \
