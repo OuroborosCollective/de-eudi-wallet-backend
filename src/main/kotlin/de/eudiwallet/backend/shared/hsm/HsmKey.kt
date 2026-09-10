@@ -4,7 +4,7 @@ import de.eudiwallet.backend.shared.hsm.pkcs11.AttributeValues
 import de.eudiwallet.backend.shared.hsm.pkcs11.Ck
 import java.time.Instant
 import java.time.LocalDate
-import java.util.TimeZone
+import java.time.ZoneOffset
 
 const val HSM_PRIVATE_KEY_LABEL_SUFFIX = "-prvk"
 
@@ -40,11 +40,16 @@ data class HsmKey(
     }
 }
 
-fun List<HsmKey>.findActiveKeys(validityDate: Instant): List<HsmKey> {
-    val on = validityDate.atZone(TimeZone.getDefault().toZoneId()).toLocalDate()
-    return this.filter { !it.startDate.isAfter(on) && !it.endDate.isBefore(on) }
-        .sortedByDescending { it.startDate }
+internal fun Instant.toHsmValidityDate(): LocalDate = atZone(ZoneOffset.UTC).toLocalDate()
+
+fun HsmKey.isActiveAt(validityDate: Instant): Boolean {
+    val on = validityDate.toHsmValidityDate()
+    return !startDate.isAfter(on) && !endDate.isBefore(on)
 }
+
+fun List<HsmKey>.findActiveKeys(validityDate: Instant): List<HsmKey> =
+    filter { it.isActiveAt(validityDate) }
+        .sortedByDescending { it.startDate }
 
 fun List<HsmKey>.findPrimaryKey(validityDate: Instant): HsmKey? = findActiveKeys(validityDate).firstOrNull()
 
