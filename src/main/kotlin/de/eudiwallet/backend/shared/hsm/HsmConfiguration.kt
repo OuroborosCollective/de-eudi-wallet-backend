@@ -17,21 +17,6 @@ class HsmConfiguration(
     val defaultSlot: SlotConfig get() = SlotConfig(slotLabel, slotPin, poolSize)
 }
 
-@Suppress("MagicNumber")
-data class SlotConfig(
-    val label: String,
-    val pin: String,
-    val poolSize: Int = 10,
-    val threadCount: Int? = null,
-) {
-    val workerCount: Int get() = threadCount ?: poolSize
-
-    init {
-        require(poolSize >= 1) { "poolSize must be at least 1" }
-        require(workerCount >= 1) { "threadCount must be at least 1" }
-    }
-}
-
 interface HsmProvider {
     suspend fun <R> use(
         spanName: String,
