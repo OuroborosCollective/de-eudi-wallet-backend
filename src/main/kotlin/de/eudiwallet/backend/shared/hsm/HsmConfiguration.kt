@@ -46,26 +46,6 @@ class HsmConfiguration(
     val defaultSlot: SlotConfig get() = SlotConfig(slotLabel, slotPin, poolSize)
 }
 
-@Suppress("MagicNumber")
-data class SlotConfig(
-    val label: String,
-    val pin: String,
-    val poolSize: Int = 10,
-    val threadCount: Int? = null,
-) {
-    val workerCount: Int get() = threadCount ?: poolSize
-
-    init {
-        require(label.isNotBlank()) { "label must not be blank" }
-        require(poolSize in 1..MAX_HSM_POOL_SIZE) {
-            "poolSize must be between 1 and $MAX_HSM_POOL_SIZE"
-        }
-        require(workerCount in 1..MAX_HSM_WORKER_COUNT) {
-            "threadCount must be between 1 and $MAX_HSM_WORKER_COUNT"
-        }
-    }
-}
-
 interface HsmProvider {
     suspend fun <R> use(
         spanName: String,

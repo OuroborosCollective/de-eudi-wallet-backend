@@ -1,0 +1,39 @@
+{
+  "boundaryRuntime": "PASS",
+  "checkoutRevision": null,
+  "checks": 11224,
+  "compiler": "info: kotlinc-jvm 1.9.0 (JRE 21.0.11+10-1-deb13u2-Debian)",
+  "fullWalletBuild": "NOT_RUN",
+  "githubHeadRevision": null,
+  "hardwareHsm": "NOT_RUN",
+  "jvm": "openjdk version \"21.0.11\" 2026-04-21\nOpenJDK Runtime Environment (build 21.0.11+10-1-deb13u2-Debian)\nOpenJDK 64-Bit Server VM (build 21.0.11+10-1-deb13u2-Debian, mixed mode, sharing)",
+  "mutationTests": {
+    "digest_guard_disabled": "COMPILED_AND_REJECTED_BY_TESTS",
+    "gcm_tag_guard_disabled": "COMPILED_AND_REJECTED_BY_TESTS",
+    "mac_output_guard_disabled": "COMPILED_AND_REJECTED_BY_TESTS",
+    "pin_bytes_not_cleared": "COMPILED_AND_REJECTED_BY_TESTS",
+    "pin_text_leak": "COMPILED_AND_REJECTED_BY_TESTS",
+    "zero_r_accepted": "COMPILED_AND_REJECTED_BY_TESTS"
+  },
+  "nativeIntegration": "NOT_REQUESTED",
+  "scope": "production boundary helpers; optional real SoftHSM PKCS11 adapter",
+  "sonarQube": "NOT_RUN",
+  "sourceSha256": {
+    "security-tests/HsmBoundaryRegression.kt": "11e2a50bc45890ccaf9ee96a43334181bcfabe3c73ae2eecc79c108204b9a739",
+    "src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmException.kt": "afdb107b4a8c17eee2e593ebde0bc5d23d20617f63db78aa33ce5c92b797a797",
+    "src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmOperationChecks.kt": "8fac04a88438c379460096788e9b239a786d0d867f8ddfbe5081162e0e04c239",
+    "src/main/kotlin/de/eudiwallet/backend/shared/hsm/SlotConfig.kt": "3b9b210f58739482b06c89bb29bbd623dfbf7d57af0b3b795a14b98d558f3419",
+    "src/main/kotlin/de/eudiwallet/backend/shared/hsm/pkcs11/PinEncoding.kt": "140d0403d0f5947bfdcf8e83a5950cd045fc7b94167b2161d9e5fa2f8b296661"
+  },
+  "sourceWiringStaticOnly": {
+    "digest_guard_before_lookup_and_unwrap": true,
+    "ecdsa_result_shape_gate": true,
+    "gcm_shape_before_native_decrypt": true,
+    "hmac_result_shape_gate": true,
+    "pin_caller_chars_cleared": true,
+    "pin_encoder_and_native_wipe": true,
+    "pin_no_immutable_string_or_spread_copy": true,
+    "single_slot_config_definition": true
+  },
+  "status": "PASS_BOUNDED_SCOPE"
+}
