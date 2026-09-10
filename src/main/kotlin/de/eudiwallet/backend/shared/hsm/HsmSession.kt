@@ -16,15 +16,32 @@ import java.security.SecureRandom
 import java.security.interfaces.ECPublicKey
 import java.time.Instant
 
+private const val MAX_HSM_WRAPPED_PRIVATE_KEY_BYTES = 64 * 1024
+private const val SHA256_DIGEST_BYTES = 32
+private const val P256_RAW_ECDSA_SIGNATURE_BYTES = 64
+
 @JvmInline
 value class HsmWrappedPrvk(
     val bytes: ByteArray,
-)
+) {
+    init {
+        require(bytes.isNotEmpty()) { "Wrapped private key must not be empty" }
+        require(bytes.size <= MAX_HSM_WRAPPED_PRIVATE_KEY_BYTES) {
+            "Wrapped private key exceeds the supported size bound"
+        }
+    }
+}
 
 @JvmInline
 value class EcdsaSignature(
     val bytes: ByteArray,
 ) {
+    init {
+        require(bytes.size == P256_RAW_ECDSA_SIGNATURE_BYTES) {
+            "Raw P-256 ECDSA signature must contain exactly $P256_RAW_ECDSA_SIGNATURE_BYTES bytes"
+        }
+    }
+
     fun toDer(): ByteArray = ECDSA.transcodeSignatureToDER(bytes)
 }
 
@@ -45,6 +62,15 @@ data class EncryptedData(
     val authTag: ByteArray,
     val iv: ByteArray,
 ) {
+    init {
+        require(authTag.size == AES_TAG_BYTES) {
+            "AES-GCM authentication tag must contain exactly $AES_TAG_BYTES bytes"
+        }
+        require(iv.size == IV_BYTES) {
+            "AES-GCM IV must contain exactly $IV_BYTES bytes"
+        }
+    }
+
     companion object {
         fun fromCipherData(
             data: ByteArray,
@@ -241,14 +267,18 @@ class HsmSession internal constructor(
     private fun signDigest(
         key: HsmKeyRef.EcPrivateKeyRef,
         digest: ByteArray,
-    ): EcdsaSignature =
-        try {
+    ): EcdsaSignature {
+        require(digest.size == SHA256_DIGEST_BYTES) {
+            "ECDSA signing input must be an exact SHA-256 digest"
+        }
+        return try {
             telemetryService.withSpanSync("session.sign (ECDSA)") {
                 EcdsaSignature(pkcs11.sign(sessionHandle, Mechanism.Ecdsa, key.handle, digest))
             }
         } catch (e: Pkcs11Exception) {
             throw HsmException.SigningFailedException(e)
         }
+    }
 
     fun signHMAC(
         key: HsmKeyRef.GenericSecretKeyRef,
