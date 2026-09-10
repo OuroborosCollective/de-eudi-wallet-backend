@@ -27,6 +27,8 @@ jobs:
         run: python security-tests/security_invariants.py
       - name: Verify HSM UTC validity oracle
         run: python security-tests/hsm_validity_oracle.py
+      - name: Verify MDVM replay and evidence oracle
+        run: python security-tests/mdvm_replay_oracle.py
       - name: Emit revision-bound source evidence
         shell: bash
         run: |
@@ -37,5 +39,9 @@ jobs:
             src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmSession.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/SymmetricKeyLineage.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/AsymmetricSigningLineage.kt \
+            src/main/kotlin/de/eudiwallet/backend/mdvm/MdvmAccount.kt \
+            src/main/kotlin/de/eudiwallet/backend/mdvm/MdvmAccountService.kt \
+            src/main/kotlin/de/eudiwallet/backend/mdvm/MdvmAccountRepository.kt \
             security-tests/security_invariants.py \
-            security-tests/hsm_validity_oracle.py
+            security-tests/hsm_validity_oracle.py \
+            security-tests/mdvm_replay_oracle.py
