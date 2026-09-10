@@ -1,0 +1,38 @@
+info: kotlinc-jvm 1.9.0 (JRE 21.0.11+10-1-deb13u2-Debian)
+openjdk version "21.0.11" 2026-04-21
+OpenJDK Runtime Environment (build 21.0.11+10-1-deb13u2-Debian)
+OpenJDK 64-Bit Server VM (build 21.0.11+10-1-deb13u2-Debian, mixed mode, sharing)
+48ec439fd6cde1c8b3c70383f6ff6a589e76514ad2b2df43c0ac99261bcd2a0f  /mnt/data/wallet_security_run/working/src/main/kotlin/de/eudiwallet/backend/shared/WalletBootstrapSecurity.kt
+af025f0094344bde4638b8dd13426c3980955340302283612d682de2d9d05a56  /mnt/data/wallet_security_run/working/security-tests/WalletBootstrapSecurityRegression.kt
+PASS all-service-entry-policies-and-safe-arguments
+PASS compact-pinned-aliases
+PASS correct-pin-aliases-remain-functional
+PASS indexed-management-wildcards
+PASS safe-indexed-management-options-remain-functional
+PASS indexed-config-source-overrides
+PASS indexed-forbidden-profiles
+PASS prepared-environment-profile-regression
+PASS indexed-scalar-pins
+PASS indexed-secrets
+PASS duplicate-normalized-pins
+PASS no-user-controlled-key-in-errors
+PASS reject-before-any-property-write
+PASS late-pin-conflict-is-read-only
+PASS compact-system-property-conflict
+PASS indexed-system-property-conflict
+PASS opaque-configuration-rejection-is-read-only
+PASS early-forbidden-profile-is-read-only
+PASS exact-argument-byte-boundary
+PASS exact-total-byte-boundary
+PASS argument-count-boundary
+PASS unicode-and-surrogate-boundaries
+PASS invalid-and-unknown-service-rejection
+PASS seeded-alias-variations-5000
+PASS concurrent-successful-validation-256
+BOOTSTRAP_REGRESSION groups=25 assertions=13270 failures=0
+PASS combined-source-wiring (static)
+tmp/tmp.aqkQBSiW2G/WalletBootstrapSecurity.kt:283:13: warning: variable 'containsWildcard' is never used
+        val containsWildcard =
+            ^
+PASS compiled-mutation-detected wildcard
+PASS compiled-mutation-detected side_effect

@@ -47,7 +47,7 @@ object WalletBootstrapSecurity {
         )
 
     private val pinnedSpringPropertiesByCanonicalKey =
-        pinnedSpringProperties.associateBy { canonicalizePropertyKey(it.propertyName) }
+        pinnedSpringProperties.associateBy { policyKey(it.propertyName) }
 
     private val forbiddenCliSourceKeys =
         setOf(
@@ -58,7 +58,7 @@ object WalletBootstrapSecurity {
             "spring.config.location",
             "spring.config.additional.location",
             "spring.config.import",
-        )
+        ).mapTo(HashSet(), ::policyKey)
 
     private val serviceModeOverrideKeys =
         setOf(
@@ -68,7 +68,7 @@ object WalletBootstrapSecurity {
             "wallet.service.mode",
             "mdvm.mode",
             "mdvm.service.mode",
-        )
+        ).mapTo(HashSet(), ::policyKey)
 
     private val forbiddenExactFlags = setOf("debug", "trace")
 
@@ -120,12 +120,17 @@ object WalletBootstrapSecurity {
         securityCheck(serviceProfile in allowedServiceProfiles) {
             "Bootstrap rejected: unknown wallet service profile"
         }
+        securityCheck(args.size <= MAX_ARGUMENT_COUNT) {
+            "Bootstrap rejected: too many application arguments"
+        }
+        // Validate the same snapshot that is returned, before changing JVM state.
+        val arguments = args.copyOf()
         validateJvmRuntime()
-        pinSpringSecurityProperties()
         validateOpaqueHighPrecedenceConfiguration()
         validateEarlyProfileSources()
-        validateArguments(args)
-        return args.copyOf()
+        validateArguments(arguments)
+        pinSpringSecurityProperties()
+        return arguments
     }
 
     fun validatePreparedEnvironment(
@@ -177,6 +182,11 @@ object WalletBootstrapSecurity {
         val seenOptionKeys = HashSet<String>()
 
         args.forEachIndexed { index, rawArgument ->
+            // Valid UTF-8 needs at least one byte per UTF-16 code unit. Reject
+            // oversized inputs before scanning Unicode or allocating an encoding.
+            securityCheck(rawArgument.length <= MAX_ARGUMENT_BYTES) {
+                "Bootstrap rejected: application argument at index $index is too large"
+            }
             securityCheck(rawArgument.isNotBlank()) {
                 "Bootstrap rejected: blank application argument at index $index"
             }
@@ -221,31 +231,36 @@ object WalletBootstrapSecurity {
             "Bootstrap rejected: invalid option key at index $index"
         }
 
-        if (canonicalKey == "spring.profiles.active" || canonicalKey == "spring.profiles.include") {
+        val comparisonKey = policyKey(canonicalKey)
+        val policyRoot = comparisonKey.substringBefore('[')
+        if (policyRoot == "springprofilesactive" || policyRoot == "springprofilesinclude") {
             val suppliedValue = if (separatorIndex >= 0) optionBody.substring(separatorIndex + 1) else ""
             rejectForbiddenProfiles(suppliedValue)
         }
 
-        securityCheck(seenOptionKeys.add(canonicalKey)) {
-            "Bootstrap rejected: duplicate option key '$canonicalKey'"
+        securityCheck(seenOptionKeys.add(comparisonKey)) {
+            "Bootstrap rejected: duplicate option key"
         }
-        securityCheck(canonicalKey !in forbiddenExactFlags) {
-            "Bootstrap rejected: diagnostic flag '$canonicalKey' is forbidden"
+        securityCheck(policyRoot !in forbiddenExactFlags) {
+            "Bootstrap rejected: diagnostic flag is forbidden"
         }
-        securityCheck(canonicalKey !in forbiddenCliSourceKeys) {
-            "Bootstrap rejected: runtime config-source override '$canonicalKey' is forbidden"
+        securityCheck(policyRoot !in forbiddenCliSourceKeys) {
+            "Bootstrap rejected: runtime config-source override is forbidden"
         }
-        securityCheck(canonicalKey !in serviceModeOverrideKeys) {
+        securityCheck(policyRoot !in serviceModeOverrideKeys) {
             "Bootstrap rejected: service mode is immutable and cannot be overridden"
         }
         securityCheck(!isSensitiveCliProperty(canonicalKey)) {
             "Bootstrap rejected: secret-bearing command-line property is forbidden"
         }
 
-        pinnedSpringPropertiesByCanonicalKey[canonicalKey]?.let { pinned ->
+        pinnedSpringPropertiesByCanonicalKey[policyRoot]?.let { pinned ->
+            securityCheck(comparisonKey == policyRoot) {
+                "Bootstrap rejected: pinned scalar property cannot be indexed"
+            }
             val suppliedValue = if (separatorIndex >= 0) optionBody.substring(separatorIndex + 1) else ""
             securityCheck(suppliedValue.equals(pinned.requiredValue, ignoreCase = true)) {
-                "Bootstrap rejected: pinned security property '$canonicalKey' cannot be weakened"
+                "Bootstrap rejected: pinned security property cannot be weakened"
             }
         }
 
@@ -257,8 +272,9 @@ object WalletBootstrapSecurity {
         optionBody: String,
         separatorIndex: Int,
     ) {
-        if (canonicalKey != "management.endpoints.web.exposure.include" &&
-            canonicalKey != "management.endpoints.jmx.exposure.include"
+        val policyRoot = policyKey(canonicalKey).substringBefore('[')
+        if (policyRoot != "managementendpointswebexposureinclude" &&
+            policyRoot != "managementendpointsjmxexposureinclude"
         ) {
             return
         }
@@ -278,22 +294,28 @@ object WalletBootstrapSecurity {
 
     private fun pinSpringSecurityProperties() {
         val systemProperties = System.getProperties()
-        val systemPropertyNames = systemProperties.stringPropertyNames()
-
-        pinnedSpringProperties.forEach { pinned ->
-            val canonicalPinnedKey = canonicalizePropertyKey(pinned.propertyName)
-
-            systemPropertyNames
-                .asSequence()
-                .filter { canonicalizePropertyKey(it) == canonicalPinnedKey }
-                .forEach { existingName ->
-                    val existingValue = systemProperties.getProperty(existingName)
-                    securityCheck(existingValue.equals(pinned.requiredValue, ignoreCase = true)) {
-                        "Bootstrap rejected: JVM property '$canonicalPinnedKey' conflicts with the pinned security policy"
+        // Ordinary Properties readers/writers use this same monitor. Validate
+        // every conflict before applying any pin; a failed validation is read-only.
+        // This is not a sandbox against hostile code already inside the JVM.
+        synchronized(systemProperties) {
+            val systemPropertyNames = systemProperties.stringPropertyNames()
+            pinnedSpringProperties.forEach { pinned ->
+                val pinnedKey = policyKey(pinned.propertyName)
+                systemPropertyNames.asSequence()
+                    .filter { policyKey(it).substringBefore('[') == pinnedKey }
+                    .forEach { existingName ->
+                        securityCheck(
+                            policyKey(existingName) == pinnedKey &&
+                                systemProperties.getProperty(existingName)
+                                    .equals(pinned.requiredValue, ignoreCase = true),
+                        ) {
+                            "Bootstrap rejected: JVM property conflicts with the pinned security policy"
+                        }
                     }
-                }
-
-            System.setProperty(pinned.propertyName, pinned.requiredValue)
+            }
+            pinnedSpringProperties.forEach { pinned ->
+                systemProperties.setProperty(pinned.propertyName, pinned.requiredValue)
+            }
         }
     }
 
@@ -374,9 +396,20 @@ object WalletBootstrapSecurity {
             codePoint in 0x2066..0x2069
 
     private fun isSensitiveCliProperty(canonicalKey: String): Boolean {
-        val terminal = canonicalKey.substringAfterLast('.', canonicalKey)
-        return terminal in sensitiveTerminalKeyParts || sensitiveKeySuffixes.any { canonicalKey.endsWith(it) }
+        val unindexedKey = canonicalKey.substringBeforeLast('[', canonicalKey)
+            .takeIf { canonicalKey.endsWith(']') } ?: canonicalKey
+        val terminal = unindexedKey.substringAfterLast('.', unindexedKey)
+        return terminal in sensitiveTerminalKeyParts || sensitiveKeySuffixes.any { unindexedKey.endsWith(it) }
     }
+
+    /**
+     * Conservative security-policy identity, NOT a Spring property-name parser.
+     * Reserved names also match compact/camel/underscore aliases. Keep indices
+     * for duplicate detection, but compare their roots for reserved list policy.
+     * Original arguments are never rewritten or interpreted as property values.
+     */
+    private fun policyKey(key: String): String =
+        key.filterNot { it == '.' || it == '-' || it == '_' }.lowercase(Locale.ROOT)
 
     private fun canonicalizePropertyKey(rawKey: String): String {
         val normalized =

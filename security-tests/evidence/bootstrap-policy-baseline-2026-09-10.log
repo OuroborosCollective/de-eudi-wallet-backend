@@ -1,0 +1,28 @@
+PASS all-service-entry-policies-and-safe-arguments
+FAIL compact-pinned-aliases (IllegalStateException)
+PASS correct-pin-aliases-remain-functional
+FAIL indexed-management-wildcards (IllegalStateException)
+PASS safe-indexed-management-options-remain-functional
+FAIL indexed-config-source-overrides (IllegalStateException)
+FAIL indexed-forbidden-profiles (IllegalStateException)
+PASS prepared-environment-profile-regression
+FAIL indexed-scalar-pins (IllegalStateException)
+FAIL indexed-secrets (IllegalStateException)
+FAIL duplicate-normalized-pins (IllegalStateException)
+FAIL no-user-controlled-key-in-errors (IllegalStateException)
+FAIL reject-before-any-property-write (IllegalStateException)
+FAIL late-pin-conflict-is-read-only (IllegalStateException)
+FAIL compact-system-property-conflict (IllegalStateException)
+FAIL indexed-system-property-conflict (IllegalStateException)
+FAIL opaque-configuration-rejection-is-read-only (IllegalStateException)
+FAIL early-forbidden-profile-is-read-only (IllegalStateException)
+PASS exact-argument-byte-boundary
+PASS exact-total-byte-boundary
+PASS argument-count-boundary
+PASS unicode-and-surrogate-boundaries
+FAIL invalid-and-unknown-service-rejection (IllegalStateException)
+FAIL seeded-alias-variations-5000 (IllegalStateException)
+PASS concurrent-successful-validation-256
+BOOTSTRAP_REGRESSION groups=25 assertions=2348 failures=16
+Exception in thread "main" java.lang.IllegalStateException: Failed fixed group names: compact-pinned-aliases, indexed-management-wildcards, indexed-config-source-overrides, indexed-forbidden-profiles, indexed-scalar-pins, indexed-secrets, duplicate-normalized-pins, no-user-controlled-key-in-errors, reject-before-any-property-write, late-pin-conflict-is-read-only, compact-system-property-conflict, indexed-system-property-conflict, opaque-configuration-rejection-is-read-only, early-forbidden-profile-is-read-only, invalid-and-unknown-service-rejection, seeded-alias-variations-5000
+	at securitytests.WalletBootstrapSecurityRegression.main(WalletBootstrapSecurityRegression.kt:238)

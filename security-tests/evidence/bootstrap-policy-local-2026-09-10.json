@@ -1,0 +1,46 @@
+{
+  "schema": "wallet-bootstrap-policy-evidence-v1",
+  "base_revision": "6dacf49079daf232a3e1579877a824060bb0d68e",
+  "observed_at_utc": "2026-09-10T03:44:06.886672+00:00",
+  "original_policy_git_blob": "98d15182568678b4ab46fc2c045a3872fe752806",
+  "local_runtime": {
+    "compiler": "kotlinc-jvm 1.9.0",
+    "jdk": "OpenJDK 21.0.11",
+    "jvm_target": 17,
+    "full_runner_exit_code": 0,
+    "groups": 25,
+    "assertions": 13270,
+    "failed_groups": 0,
+    "seeded_alias_variations": 5000,
+    "parallel_validations": 256,
+    "compiled_mutations_detected": [
+      "wildcard",
+      "side_effect"
+    ],
+    "baseline_failed_groups": 16
+  },
+  "source_sha256": {
+    "src/main/kotlin/de/eudiwallet/backend/WalletBackendApplication.kt": "860968eceae78bab3b7064d4b86a7ed5c1b39684060a1b4e89a45055869254c8",
+    "src/main/kotlin/de/eudiwallet/backend/shared/WalletBootstrapSecurity.kt": "48ec439fd6cde1c8b3c70383f6ff6a589e76514ad2b2df43c0ac99261bcd2a0f",
+    "security-tests/WalletBootstrapSecurityRegression.kt": "af025f0094344bde4638b8dd13426c3980955340302283612d682de2d9d05a56",
+    "security-tests/run_bootstrap_regressions.sh": "df273707229db85be28f84706ecb957ba6de1262cc50fc1af660add707c68cca",
+    ".github/workflows/bootstrap-security-regression.yml": "8fa68d2c3b970510b0fef8c18f293265857249d7624819b6384f29dd660d7297",
+    "security-tests/evidence/bootstrap-policy-local-2026-09-10.log": "61d6eb413a265ab3fe52791ed1ea879de7937ac4e91b1fe602681d237b9f0eec",
+    "security-tests/evidence/bootstrap-policy-baseline-2026-09-10.log": "987eba25a53ca9a6e4fd5d1eecac2919643ace7a74a6bf19d39024646130a9cd"
+  },
+  "limits": {
+    "whole_backend_compile": "NOT_RUN",
+    "spring_4_1_1_binding_runtime": "NOT_RUN",
+    "local_docker_runtime": "NOT_AVAILABLE",
+    "production_deployment": "NOT_PERFORMED",
+    "customer_data_access": "NOT_PERFORMED",
+    "wolfram": "CONTEXT_NETWORK_ERROR_NO_FORMAL_PASS",
+    "sonarqube": "NOT_RUN",
+    "all_module_null_rounds": 0
+  },
+  "notes": [
+    "Initial complete-run attempt hit the 90-second local tool timeout during its third compile; the subsequent complete run finished with exit 0.",
+    "Tests execute the actual production policy. The combined entrypoint check is a static assertion, not a Spring boot.",
+    "No assertion of account-compromise exploitability, backdoor intent or universal security."
+  ]
+}
