@@ -27,15 +27,20 @@ jobs:
         run: python security-tests/security_invariants.py
       - name: Verify HSM UTC validity oracle
         run: python security-tests/hsm_validity_oracle.py
+      - name: Verify HSM pool and protocol boundary invariants
+        run: python security-tests/hsm_boundary_invariants.py
       - name: Emit revision-bound source evidence
         shell: bash
         run: |
           set -euo pipefail
           printf 'revision=%s\n' "$GITHUB_SHA"
           sha256sum \
+            src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmConfiguration.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmKey.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmSession.kt \
+            src/main/kotlin/de/eudiwallet/backend/shared/hsm/HsmSessionPool.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/SymmetricKeyLineage.kt \
             src/main/kotlin/de/eudiwallet/backend/shared/keyrollover/AsymmetricSigningLineage.kt \
             security-tests/security_invariants.py \
-            security-tests/hsm_validity_oracle.py
+            security-tests/hsm_validity_oracle.py \
+            security-tests/hsm_boundary_invariants.py
