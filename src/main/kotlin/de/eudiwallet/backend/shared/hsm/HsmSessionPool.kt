@@ -111,9 +111,15 @@ class HsmSessionPool(
                     val primarySession = pkcs11.openSession(slotId)
                     val opened = mutableListOf(primarySession)
                     try {
-                        pkcs11.login(primarySession, slot.pin.toCharArray())
+                        val pin = slot.pin.toCharArray()
+                        try {
+                            pkcs11.login(primarySession, pin)
+                        } finally {
+                            pin.fill('\u0000')
+                        }
                         repeat(slot.poolSize - 1) { opened.add(pkcs11.openSession(slotId)) }
-                    } catch (ex: Pkcs11Exception) {
+                    } catch (ex: Exception) {
+                        // Includes PIN encoding failures before C_Login is called.
                         pkcs11.closeAll(opened)
                         throw ex
                     }
