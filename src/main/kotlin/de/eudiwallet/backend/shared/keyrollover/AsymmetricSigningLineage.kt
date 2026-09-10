@@ -7,6 +7,7 @@ import de.eudiwallet.backend.shared.hsm.HsmKeyId
 import de.eudiwallet.backend.shared.hsm.HsmProvider
 import de.eudiwallet.backend.shared.hsm.certObjectKey
 import de.eudiwallet.backend.shared.hsm.findActiveKeys
+import de.eudiwallet.backend.shared.hsm.toHsmValidityDate
 import de.eudiwallet.backend.shared.s3.S3CertChainProvider
 import de.eudiwallet.backend.shared.telemetry.MetricsService
 import de.eudiwallet.backend.shared.telemetry.runBlockingWithTelemetry
@@ -17,7 +18,6 @@ import java.security.Signature
 import java.security.cert.X509Certificate
 import java.time.Instant
 import java.time.LocalDate
-import java.util.TimeZone
 import java.util.concurrent.atomic.AtomicReference
 
 private const val POP_CHALLENGE_BYTES = 32
@@ -44,7 +44,13 @@ class AsymmetricSigningLineage(
 
     private val held = AtomicReference<CertifiedKey?>(null)
 
-    override fun current(): CertifiedKey = requireNotNull(held.get()) { "$name lineage has no resolved key" }
+    override fun current(): CertifiedKey {
+        val certifiedKey = requireNotNull(held.get()) { "$name lineage has no resolved key" }
+        check(!certifiedKey.endDate.isBefore(Instant.now().toHsmValidityDate())) {
+            "$name lineage signing key is outside its declared validity window"
+        }
+        return certifiedKey
+    }
 
     fun initialize() = roll(failFast = true)
 
@@ -91,11 +97,11 @@ class AsymmetricSigningLineage(
 
     private fun logHoldingLastGood(reason: String) {
         val heldKey = held.get()
-        val today = Instant.now().atZone(TimeZone.getDefault().toZoneId()).toLocalDate()
-        if (heldKey != null && heldKey.endDate.isBefore(today)) {
+        if (heldKey != null && heldKey.endDate.isBefore(Instant.now().toHsmValidityDate())) {
+            held.compareAndSet(heldKey, null)
             log.error {
-                "$name: $reason; held key ${heldKey.keyId} expired on ${heldKey.endDate} — now signing with an " +
-                    "expired key"
+                "$name: $reason; held key ${heldKey.keyId} expired on ${heldKey.endDate} — signing is disabled " +
+                    "until a valid certified key resolves"
             }
         } else {
             log.warn { "$name: $reason; holding still-valid ${heldKey?.keyId}" }

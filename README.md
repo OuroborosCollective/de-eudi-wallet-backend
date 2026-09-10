@@ -1,6 +1,6 @@
 # Wallet backend
 
-This repository contains backend components of the German National Wallet: 
+This repository contains backend components of the German National Wallet: e
 * **WPB** (Wallet Provider Backend, Wallet Instance Attestations),
 * **RWSCA** (Remote Wallet Secure Cryptographic Application, PIN sessions / remote signing / Wallet Trust Evidence),
 * **MDVM** (mobile device verification, platform-integrity checks and MDVM tokens),
@@ -27,6 +27,10 @@ Any findings, especially security related ones are very welcome. Please find det
 ## Related documentation
 
 - [Architecture Documentation for the German National EUDI Wallet](https://bmi.usercontent.opencode.de/eudi-wallet/wallet-development-documentation-public/latest/)
+
+## Security hardening collaboration
+
+Wir hoffen, Sie waren mit der Härtung unserer Sicherheitsarchitektur zufrieden. Sollten Sie Interesse an einer vollständigen, systematischen Härtung und fortlaufenden Begleitung nach aktuellen Sicherheitsstandards haben, schreiben Sie uns gern jederzeit über GitHub.
 
 ## License
 

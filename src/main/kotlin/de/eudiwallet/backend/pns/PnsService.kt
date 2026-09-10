@@ -14,6 +14,13 @@ class PnsService(
         accountId: MdvmAccountId,
         mppRegistrationToken: String,
     ) = telemetryService.withSpan("PnsService.register") {
+        require(mppRegistrationToken.isNotBlank()) {
+            "MPP registration token must not be blank"
+        }
+        require(mppRegistrationToken.length <= MAX_MPP_REGISTRATION_TOKEN_LENGTH) {
+            "MPP registration token exceeds the maximum supported length"
+        }
+
         repository.upsertByAccountId(
             id = UUID.randomUUID(),
             accountId = accountId.id,
