@@ -15,7 +15,6 @@ import org.bouncycastle.crypto.ec.CustomNamedCurves
 import java.security.SecureRandom
 import java.security.interfaces.ECPublicKey
 import java.time.Instant
-import java.time.ZoneId
 
 @JvmInline
 value class HsmWrappedPrvk(
@@ -359,14 +358,24 @@ class HsmSession internal constructor(
         keyClass: HsmKeyClass<T>,
     ): CachedKey {
         val template = keyClass.template() + Attr(Ck.CKA_ID, keyId.byteArrayValue())
-        val handle =
+        val handles =
             try {
                 telemetryService.withSpanSync("session.findObjects (by ID)") {
-                    pkcs11.findObjects(sessionHandle, template, limit = 1)
+                    pkcs11.findObjects(sessionHandle, template, limit = 2)
                 }
             } catch (ex: Pkcs11Exception) {
                 throw HsmException.KeyLookupFailure(keyId.value, ex)
-            }.firstOrNull() ?: throw HsmException.KeyNotFoundException(keyId.value)
+            }
+        val handle =
+            when (handles.size) {
+                0 -> throw HsmException.KeyNotFoundException(keyId.value)
+                1 -> handles.single()
+                else ->
+                    throw HsmException.KeyLookupFailure(
+                        keyId.value,
+                        IllegalStateException("Multiple HSM objects match the same key ID and class"),
+                    )
+            }
         val attributes = readAttributes(handle, keyId.value, Ck.CKA_ID, Ck.CKA_LABEL)
         val key =
             CachedKey(
@@ -392,12 +401,11 @@ class HsmSession internal constructor(
             } catch (ex: Pkcs11Exception) {
                 throw HsmException.KeyLookupFailure(keyPrefix, ex)
             }
-        val validityDay = validityDate.atZone(ZoneId.systemDefault()).toLocalDate()
         return handles
             .map { readAttributes(it, keyPrefix, Ck.CKA_ID, Ck.CKA_LABEL, Ck.CKA_START_DATE, Ck.CKA_END_DATE) }
             .filter { it.string(Ck.CKA_LABEL).orEmpty().startsWith(keyPrefix) }
             .mapNotNull { HsmKey.from(it) }
-            .filter { !it.endDate.isBefore(validityDay) }
+            .filter { it.isActiveAt(validityDate) }
     }
 
     private fun readAttributes(
