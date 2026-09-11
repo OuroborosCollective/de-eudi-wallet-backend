@@ -1,0 +1,6 @@
+{
+  "name": "EUDI Wallet Backend",
+  "description": "German National EUDI Wallet Backend service (WPB, RWSCA, MDVM, PNS, and Status Lists)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
